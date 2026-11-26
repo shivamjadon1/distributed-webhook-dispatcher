@@ -1,0 +1,74 @@
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+
+spring:
+  application:
+    name: distributed-webhook-dispatcher
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:webhook_db}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:postgres}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:shivam}}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 50
+    show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  task:
+    execution:
+      pool:
+        core-size: 10
+        max-size: 50
+        queue-capacity: 500
+        keep-alive: 60s
+        thread-name-prefix: webhook-exec-
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+webhook:
+  worker:
+    enabled: true
+    polling-rate-ms: 1000
+    batch-size: 25
+    max-retries: 3
+    retry-backoffs-ms: [2000, 4000, 8000]
+  rate-limit:
+    ingestion:
+      capacity: 100
+      refill-tokens: 100
+      refill-duration-seconds: 1
+    downstream:
+      capacity-per-domain: 10
+      refill-tokens-per-domain: 10
+      refill-duration-seconds: 1
+  client:
+    connect-timeout-ms: 5000
+    read-timeout-ms: 5000
+  security:
+    allow-loopback-for-testing: false
+    allow-insecure-http: false

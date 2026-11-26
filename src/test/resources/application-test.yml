@@ -1,0 +1,36 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:webhooktest;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  flyway:
+    enabled: false
+
+webhook:
+  worker:
+    enabled: false
+    polling-rate-ms: 10000
+    batch-size: 25
+    max-retries: 3
+    retry-backoffs-ms: [2000, 4000, 8000]
+  rate-limit:
+    ingestion:
+      capacity: 5
+      refill-tokens: 5
+      refill-duration-seconds: 1
+    downstream:
+      capacity-per-domain: 2
+      refill-tokens-per-domain: 2
+      refill-duration-seconds: 1
+  client:
+    connect-timeout-ms: 1500
+    read-timeout-ms: 1500
+  security:
+    allow-loopback-for-testing: true
+    allow-insecure-http: true

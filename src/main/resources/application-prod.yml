@@ -1,0 +1,14 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+webhook:
+  security:
+    allow-loopback-for-testing: false
+    allow-insecure-http: false
