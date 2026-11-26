@@ -12,8 +12,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Handles standard cloud platform database environment variables (Render / Railway / Heroku).
- * Converts postgres:// or postgresql:// DATABASE_URL into Spring JDBC properties.
+ * Handles cloud platform database environment variables (Railway, Render, Fly.io, Heroku).
+ * Converts DATABASE_URL / DATABASE_PUBLIC_URL or PGHOST variables into Spring JDBC properties.
  */
 public class DatabaseEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
@@ -22,6 +22,12 @@ public class DatabaseEnvironmentPostProcessor implements EnvironmentPostProcesso
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         String databaseUrl = environment.getProperty("DATABASE_URL");
+        if (databaseUrl == null || databaseUrl.isBlank()) {
+            databaseUrl = environment.getProperty("DATABASE_PUBLIC_URL");
+        }
+
+        Map<String, Object> props = new HashMap<>();
+
         if (databaseUrl != null && (databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://"))) {
             try {
                 URI dbUri = URI.create(databaseUrl.replace("postgres://", "http://").replace("postgresql://", "http://"));
@@ -40,17 +46,37 @@ public class DatabaseEnvironmentPostProcessor implements EnvironmentPostProcesso
                 int port = dbUri.getPort() != -1 ? dbUri.getPort() : 5432;
                 String path = dbUri.getPath();
                 String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + path;
+                if (dbUri.getQuery() != null && !dbUri.getQuery().isBlank()) {
+                    jdbcUrl += "?" + dbUri.getQuery();
+                }
 
-                Map<String, Object> props = new HashMap<>();
                 props.put("spring.datasource.url", jdbcUrl);
                 props.put("spring.datasource.username", username);
                 props.put("spring.datasource.password", password);
 
                 environment.getPropertySources().addFirst(new MapPropertySource("cloudDatabaseProperties", props));
                 log.info("Successfully configured cloud PostgreSQL DataSource for host: {}", host);
+                return;
             } catch (Exception e) {
                 log.warn("Could not parse DATABASE_URL environment variable: {}", e.getMessage());
             }
+        }
+
+        // Fallback for Railway PG* variables
+        String pgHost = environment.getProperty("PGHOST");
+        if (pgHost != null && !pgHost.isBlank()) {
+            String pgPort = environment.getProperty("PGPORT", "5432");
+            String pgDatabase = environment.getProperty("PGDATABASE", "railway");
+            String pgUser = environment.getProperty("PGUSER", "postgres");
+            String pgPassword = environment.getProperty("PGPASSWORD", "");
+
+            String jdbcUrl = "jdbc:postgresql://" + pgHost + ":" + pgPort + "/" + pgDatabase;
+            props.put("spring.datasource.url", jdbcUrl);
+            props.put("spring.datasource.username", pgUser);
+            props.put("spring.datasource.password", pgPassword);
+
+            environment.getPropertySources().addFirst(new MapPropertySource("cloudPgProperties", props));
+            log.info("Successfully configured PostgreSQL DataSource from PGHOST: {}", pgHost);
         }
     }
 }

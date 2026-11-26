@@ -16,6 +16,9 @@ RUN mvn clean package -DskipTests -B
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 # Run as non-root user for container security
 RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser
 USER appuser
