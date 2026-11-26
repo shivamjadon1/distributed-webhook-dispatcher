@@ -27,19 +27,33 @@ public class DatabaseEnvironmentPostProcessor implements EnvironmentPostProcesso
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        String databaseUrl = environment.getProperty("DATABASE_URL");
-        if (databaseUrl == null || databaseUrl.isBlank()) {
-            databaseUrl = environment.getProperty("DATABASE_PRIVATE_URL");
+        // Check environment properties then fallback directly to System.getenv
+        String[] candidateKeys = {
+            "DATABASE_URL", "DATABASE_PRIVATE_URL", "DATABASE_PUBLIC_URL",
+            "POSTGRES_URL", "POSTGRESQL_URL", "SPRING_DATASOURCE_URL"
+        };
+
+        String databaseUrl = null;
+        for (String key : candidateKeys) {
+            String val = environment.getProperty(key);
+            if (val == null || val.isBlank()) {
+                val = System.getenv(key);
+            }
+            if (val != null && !val.isBlank()) {
+                databaseUrl = val;
+                System.out.println("[DatabaseEnvironmentPostProcessor] Found database URL in key: " + key);
+                break;
+            }
         }
-        if (databaseUrl == null || databaseUrl.isBlank()) {
-            databaseUrl = environment.getProperty("DATABASE_PUBLIC_URL");
-        }
-        if (databaseUrl == null || databaseUrl.isBlank()) {
-            databaseUrl = environment.getProperty("POSTGRES_URL");
-        }
-        if (databaseUrl == null || databaseUrl.isBlank()) {
-            databaseUrl = environment.getProperty("SPRING_DATASOURCE_URL");
-        }
+
+        // Print all relevant keys present in system env to aid debugging
+        System.out.println("[DatabaseEnvironmentPostProcessor] Active DB/PG/Railway env keys: " + 
+            System.getenv().keySet().stream()
+                .filter(k -> k.toUpperCase().contains("DATA") || k.toUpperCase().contains("POSTGRES") || 
+                             k.toUpperCase().contains("PG") || k.toUpperCase().contains("RAILWAY") ||
+                             k.toUpperCase().contains("SPRING"))
+                .toList()
+        );
 
         Map<String, Object> props = new HashMap<>();
 
@@ -94,11 +108,25 @@ public class DatabaseEnvironmentPostProcessor implements EnvironmentPostProcesso
 
         // Fallback for Railway PG* individual variables
         String pgHost = environment.getProperty("PGHOST");
+        if (pgHost == null || pgHost.isBlank()) {
+            pgHost = System.getenv("PGHOST");
+        }
         if (pgHost != null && !pgHost.isBlank()) {
-            String pgPort = environment.getProperty("PGPORT", "5432");
-            String pgDatabase = environment.getProperty("PGDATABASE", "railway");
-            String pgUser = environment.getProperty("PGUSER", "postgres");
-            String pgPassword = environment.getProperty("PGPASSWORD", "");
+            String pgPort = environment.getProperty("PGPORT");
+            if (pgPort == null || pgPort.isBlank()) pgPort = System.getenv("PGPORT");
+            if (pgPort == null || pgPort.isBlank()) pgPort = "5432";
+
+            String pgDatabase = environment.getProperty("PGDATABASE");
+            if (pgDatabase == null || pgDatabase.isBlank()) pgDatabase = System.getenv("PGDATABASE");
+            if (pgDatabase == null || pgDatabase.isBlank()) pgDatabase = "railway";
+
+            String pgUser = environment.getProperty("PGUSER");
+            if (pgUser == null || pgUser.isBlank()) pgUser = System.getenv("PGUSER");
+            if (pgUser == null || pgUser.isBlank()) pgUser = "postgres";
+
+            String pgPassword = environment.getProperty("PGPASSWORD");
+            if (pgPassword == null || pgPassword.isBlank()) pgPassword = System.getenv("PGPASSWORD");
+            if (pgPassword == null) pgPassword = "";
 
             String jdbcUrl = "jdbc:postgresql://" + pgHost + ":" + pgPort + "/" + pgDatabase;
             props.put("spring.datasource.url", jdbcUrl);
