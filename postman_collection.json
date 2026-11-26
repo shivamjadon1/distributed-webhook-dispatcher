@@ -8,7 +8,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080",
+      "value": "https://distributed-webhook-dispatcher-production-8cecda62.up.railway.app",
       "type": "string"
     },
     {

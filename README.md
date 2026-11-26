@@ -2,11 +2,11 @@
 
 A production-ready, distributed, resilient webhook delivery engine built with **Java 17**, **Spring Boot 3.3.5**, **PostgreSQL**, **Spring Data JPA / Hibernate**, **Spring WebClient (Reactive Netty)**, **Flyway**, and **Bucket4j**.
 
-### 🚀 Live Deployment on Railway
-- **Railway Internal Service Host**: `distributed-webhook-dispatcher.railway.internal`
-- **Railway Internal Endpoint**: `http://distributed-webhook-dispatcher.railway.internal:8080`
-- **Health Check**: `http://distributed-webhook-dispatcher.railway.internal:8080/api/health`
-- **Web Dashboard**: `http://distributed-webhook-dispatcher.railway.internal:8080/` (and public URL via Railway Networking)
+### 🚀 Live Public Deployment
+- **Live Public URL**: [`https://distributed-webhook-dispatcher-production-8cecda62.up.railway.app`](https://distributed-webhook-dispatcher-production-8cecda62.up.railway.app)
+- **Interactive Web Dashboard**: [`https://distributed-webhook-dispatcher-production-8cecda62.up.railway.app/`](https://distributed-webhook-dispatcher-production-8cecda62.up.railway.app/)
+- **Health Check Endpoint**: [`https://distributed-webhook-dispatcher-production-8cecda62.up.railway.app/api/health`](https://distributed-webhook-dispatcher-production-8cecda62.up.railway.app/api/health)
+- **Railway Internal Mesh Host**: `distributed-webhook-dispatcher.railway.internal:8080`
 
 ---
 
