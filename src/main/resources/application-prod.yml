@@ -8,6 +8,18 @@ spring:
       ddl-auto: validate
     show-sql: false
 
+management:
+  endpoint:
+    health:
+      show-details: always
+      status:
+        http-mapping:
+          down: 200
+          out-of-service: 200
+  health:
+    diskspace:
+      enabled: false
+
 webhook:
   security:
     allow-loopback-for-testing: false
