@@ -2,6 +2,12 @@
 
 A production-ready, distributed, resilient webhook delivery engine built with **Java 17**, **Spring Boot 3.3.5**, **PostgreSQL**, **Spring Data JPA / Hibernate**, **Spring WebClient (Reactive Netty)**, **Flyway**, and **Bucket4j**.
 
+### 🚀 Live Deployment on Railway
+- **Railway Internal Service Host**: `distributed-webhook-dispatcher.railway.internal`
+- **Railway Internal Endpoint**: `http://distributed-webhook-dispatcher.railway.internal:8080`
+- **Health Check**: `http://distributed-webhook-dispatcher.railway.internal:8080/api/health`
+- **Web Dashboard**: `http://distributed-webhook-dispatcher.railway.internal:8080/` (and public URL via Railway Networking)
+
 ---
 
 ## 1. Architectural Overview & Design Philosophy
@@ -345,11 +351,25 @@ docker run -p 8080:8080 \
   distributed-webhook-dispatcher
 ```
 
+### Railway Deployment
+The project is configured with `railway.toml` and Dockerfile for native deployment on [Railway](https://railway.app):
+1. **Service Name**: `distributed-webhook-dispatcher`
+2. **Private Networking Internal URL**:
+   - `distributed-webhook-dispatcher.railway.internal`
+   - Accessible within the Railway private network mesh at `http://distributed-webhook-dispatcher.railway.internal:8080`.
+3. **Database Connection**:
+   - Attach a PostgreSQL service (e.g. `webhook-postgres`).
+   - The application automatically detects and parses `DATABASE_URL`, `DATABASE_PRIVATE_URL`, or `PGHOST` environment variables via `DatabaseEnvironmentPostProcessor`.
+4. **Health Check**:
+   - Custom endpoint at `/api/health` (HTTP 200).
+5. **Interactive Dashboard**:
+   - Access the real-time queue monitor, dispatcher console, and mock receivers at `/` or generate a public domain in Railway (Settings > Networking > Generate Domain).
+
 ### Render Deployment
 This repository contains `render.yaml` defining a Render Blueprint:
 1. Connect your GitHub repository to Render.
 2. Select **New > Blueprint**.
-3. Render automatically provisions a managed PostgreSQL database and the Web Service container with port 8080 and `/actuator/health` health checks.
+3. Render automatically provisions a managed PostgreSQL database and the Web Service container with port 8080 and `/api/health` health checks.
 4. The application automatically detects and parses Render's `DATABASE_URL` format.
 
 ---
