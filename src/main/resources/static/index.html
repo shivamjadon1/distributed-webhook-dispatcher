@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Distributed Webhook Dispatcher | Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --bg-card: rgba(18, 24, 38, 0.85);
+      --bg-card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.2);
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.2);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.2);
+      --info: #0ea5e9;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, var(--bg-dark) 55%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      line-height: 1.5;
+      padding-bottom: 4rem;
+    }
+
+    header {
+      background: rgba(11, 15, 25, 0.8);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--bg-card-border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+    }
+
+    .header-inner {
+      max-width: 1300px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.25rem;
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .brand-text h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-text p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 8px #34d399;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 0 15px var(--primary-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--bg-card-border);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: none;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 2rem auto 0;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      backdrop-filter: blur(12px);
+      transition: transform 0.2s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .stat-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .stat-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Main Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--bg-card-border);
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    label {
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .input, select, textarea {
+      width: 100%;
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      color: var(--text-main);
+      padding: 0.65rem 0.85rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    textarea {
+      font-family: var(--font-mono);
+      font-size: 0.825rem;
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .presets-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.4rem;
+    }
+
+    .preset-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      padding: 0.2rem 0.5rem;
+      font-size: 0.725rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .preset-chip:hover {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: var(--primary);
+      color: #c7d2fe;
+    }
+
+    .preset-chip.danger-chip:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: var(--danger);
+      color: #fca5a5;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .response-banner {
+      margin-top: 1rem;
+      padding: 0.85rem;
+      border-radius: 8px;
+      font-size: 0.825rem;
+      display: none;
+      border: 1px solid transparent;
+    }
+
+    .response-banner.success {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+      display: block;
+    }
+
+    .response-banner.error {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      display: block;
+    }
+
+    /* Table Styles */
+    .table-container {
+      overflow-x: auto;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    th {
+      background: rgba(11, 15, 25, 0.6);
+      padding: 0.75rem 1rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.725rem;
+      letter-spacing: 0.05em;
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--bg-card-border);
+    }
+
+    td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-size: 0.725rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .badge-success { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-failed { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-retrying { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-pending { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+    .badge-processing { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
+
+    .url-cell {
+      max-width: 260px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: var(--font-mono);
+      font-size: 0.775rem;
+    }
+
+    .mono-cell {
+      font-family: var(--font-mono);
+      font-size: 0.775rem;
+      color: var(--text-muted);
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal {
+      background: #111827;
+      border: 1px solid var(--bg-card-border);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--bg-card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .close-btn:hover {
+      color: white;
+    }
+
+    .log-entry {
+      background: rgba(17, 24, 39, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .code-box {
+      background: #0b0f19;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: #cbd5e1;
+      max-height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Filter & Search Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .filter-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--bg-card-border);
+      color: var(--text-muted);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.775rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-btn.active, .filter-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-text">
+          <h1>Distributed Webhook Dispatcher</h1>
+          <p>Production DB-Backed Queue &bull; Exponential Backoff &bull; Rate Limiting &bull; SSRF Shield</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="status-badge" id="system-status">
+          <div class="status-dot"></div>
+          <span id="status-text">Engine Online (Port 8080)</span>
+        </div>
+        <button class="btn btn-secondary" onclick="refreshAll()" title="Refresh Dashboard">
+          🔄 Refresh
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Top Statistics Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-title">Total Webhook Jobs</span>
+        <span class="stat-value" id="stat-total">0</span>
+        <span class="stat-sub">Persisted in PostgreSQL</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title" style="color: #34d399;">Delivered Successfully</span>
+        <span class="stat-value" style="color: #34d399;" id="stat-success">0</span>
+        <span class="stat-sub">HTTP 2xx Acknowledged</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title" style="color: #fbbf24;">Retrying / In-Flight</span>
+        <span class="stat-value" style="color: #fbbf24;" id="stat-retrying">0</span>
+        <span class="stat-sub">Exponential Backoff active</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title" style="color: #f87171;">Failed (Exhausted / 4xx)</span>
+        <span class="stat-value" style="color: #f87171;" id="stat-failed">0</span>
+        <span class="stat-sub">Non-retryable or max retries</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">Delivery Success Rate</span>
+        <span class="stat-value" id="stat-rate">100%</span>
+        <span class="stat-sub" id="stat-rate-sub">Completed jobs</span>
+      </div>
+    </div>
+
+    <!-- Main Grid: Dispatch Console + Job Queue Table -->
+    <div class="main-grid">
+      
+      <!-- Ingestion / Dispatch Console -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">🚀 Dispatch Webhook</h2>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">POST /api/webhooks/dispatch</span>
+        </div>
+
+        <form id="dispatch-form" onsubmit="handleDispatch(event)">
+          <div class="form-group">
+            <label for="dest-url">Destination URL</label>
+            <input type="text" id="dest-url" class="input" placeholder="https://example.com/webhook" required 
+                   value="http://localhost:8080/api/mock/receiver">
+            <div class="presets-bar">
+              <span class="preset-chip" onclick="setPreset('http://localhost:8080/api/mock/receiver', 'mock-200')">Mock 200 OK</span>
+              <span class="preset-chip" onclick="setPreset('http://localhost:8080/api/mock/fail', 'mock-500')">Mock 500 (Retry 2s,4s,8s)</span>
+              <span class="preset-chip" onclick="setPreset('http://localhost:8080/api/mock/ratelimit', 'mock-429')">Mock 429 (Retry-After)</span>
+              <span class="preset-chip" onclick="setPreset('http://localhost:8080/api/mock/client-error', 'mock-400')">Mock 400 (Abort)</span>
+              <span class="preset-chip" onclick="setPreset('https://httpbin.org/post', 'public')">httpbin.org</span>
+              <span class="preset-chip danger-chip" onclick="setPreset('http://169.254.169.254/latest/meta-data/', 'ssrf')">Test SSRF Block</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="event-id">Event ID</label>
+            <div class="input-row">
+              <input type="text" id="event-id" class="input" placeholder="evt_12345" required>
+              <button type="button" class="btn btn-secondary" onclick="generateEventId()" style="white-space: nowrap;">⚡ Auto</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="payload">JSON Payload</label>
+            <textarea id="payload" rows="5" required>{
+  "event": "payment.completed",
+  "orderId": "ord_88291",
+  "amount": 250.00,
+  "currency": "USD",
+  "customer": {
+    "id": "cust_441",
+    "email": "user@example.com"
+  }
+}</textarea>
+          </div>
+
+          <button type="submit" class="btn" style="width: 100%; justify-content: center; padding: 0.75rem;" id="dispatch-btn">
+            Send Webhook (Ingest Queue)
+          </button>
+        </form>
+
+        <div id="response-box" class="response-banner"></div>
+      </div>
+
+      <!-- Live Queue & History Table -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📋 Live Queue & Audit Monitor</h2>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <label style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
+              <input type="checkbox" id="auto-refresh-toggle" checked onchange="toggleAutoRefresh(this.checked)"> Auto-Refresh (2s)
+            </label>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <button class="filter-btn active" onclick="setFilter('ALL', this)">All (<span id="count-all">0</span>)</button>
+          <button class="filter-btn" onclick="setFilter('SUCCESS', this)">Success (<span id="count-success">0</span>)</button>
+          <button class="filter-btn" onclick="setFilter('RETRYING', this)">Retrying (<span id="count-retrying">0</span>)</button>
+          <button class="filter-btn" onclick="setFilter('PENDING', this)">Pending (<span id="count-pending">0</span>)</button>
+          <button class="filter-btn" onclick="setFilter('FAILED', this)">Failed (<span id="count-failed">0</span>)</button>
+          <input type="text" id="search-box" class="input" placeholder="Filter by Event ID / URL / ID..." 
+                 style="max-width: 260px; padding: 0.3rem 0.6rem; font-size: 0.775rem; margin-left: auto;" oninput="renderTable()">
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Event ID</th>
+                <th>Destination URL</th>
+                <th>Attempts</th>
+                <th>Next Retry</th>
+                <th>Created At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="jobs-tbody">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                  Loading webhook jobs from PostgreSQL...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Delivery Logs Modal -->
+  <div class="modal-backdrop" id="logs-modal" onclick="closeLogsModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size: 1.1rem; font-weight: 700;">Delivery Attempt Audit Logs</h3>
+          <p id="modal-job-sub" style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);"></p>
+        </div>
+        <button class="close-btn" onclick="document.getElementById('logs-modal').classList.remove('active')">&times;</button>
+      </div>
+      <div class="modal-body" id="logs-container">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allJobs = [];
+    let currentFilter = 'ALL';
+    let autoRefreshInterval = null;
+
+    function generateEventId() {
+      const rand = Math.floor(100000 + Math.random() * 900000);
+      document.getElementById('event-id').value = 'evt_' + rand;
+    }
+    generateEventId();
+
+    function setPreset(url, type) {
+      document.getElementById('dest-url').value = url;
+      generateEventId();
+    }
+
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/webhooks/jobs/stats');
+        if (res.ok) {
+          const stats = await res.json();
+          document.getElementById('stat-total').textContent = stats.total;
+          document.getElementById('stat-success').textContent = stats.success;
+          document.getElementById('stat-retrying').textContent = stats.retrying + stats.processing;
+          document.getElementById('stat-failed').textContent = stats.failed;
+
+          document.getElementById('count-all').textContent = stats.total;
+          document.getElementById('count-success').textContent = stats.success;
+          document.getElementById('count-retrying').textContent = stats.retrying;
+          document.getElementById('count-pending').textContent = stats.pending;
+          document.getElementById('count-failed').textContent = stats.failed;
+
+          const completed = stats.success + stats.failed;
+          if (completed > 0) {
+            const rate = Math.round((stats.success / completed) * 100);
+            document.getElementById('stat-rate').textContent = rate + '%';
+            document.getElementById('stat-rate-sub').textContent = `${stats.success} of ${completed} finished`;
+          } else {
+            document.getElementById('stat-rate').textContent = '100%';
+            document.getElementById('stat-rate-sub').textContent = 'No jobs completed yet';
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch stats:', err);
+      }
+    }
+
+    async function fetchJobs() {
+      try {
+        const res = await fetch('/api/webhooks/jobs');
+        if (res.ok) {
+          allJobs = await res.json();
+          renderTable();
+        }
+      } catch (err) {
+        console.error('Failed to fetch jobs:', err);
+      }
+    }
+
+    function setFilter(filter, el) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      el.classList.add('active');
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('jobs-tbody');
+      const searchQuery = (document.getElementById('search-box').value || '').toLowerCase().trim();
+
+      let filtered = allJobs;
+      if (currentFilter !== 'ALL') {
+        filtered = filtered.filter(j => j.status === currentFilter);
+      }
+      if (searchQuery) {
+        filtered = filtered.filter(j => 
+          (j.id && j.id.toLowerCase().includes(searchQuery)) ||
+          (j.eventId && j.eventId.toLowerCase().includes(searchQuery)) ||
+          (j.destinationUrl && j.destinationUrl.toLowerCase().includes(searchQuery))
+        );
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+              No webhook jobs found matching current criteria.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(job => {
+        let badgeClass = 'badge-pending';
+        if (job.status === 'SUCCESS') badgeClass = 'badge-success';
+        else if (job.status === 'FAILED') badgeClass = 'badge-failed';
+        else if (job.status === 'RETRYING') badgeClass = 'badge-retrying';
+        else if (job.status === 'PROCESSING') badgeClass = 'badge-processing';
+
+        let nextRetryStr = '-';
+        if (job.status === 'RETRYING' && job.nextRetryAt) {
+          const diffMs = new Date(job.nextRetryAt) - new Date();
+          if (diffMs > 0) {
+            nextRetryStr = `in ${(diffMs / 1000).toFixed(1)}s`;
+          } else {
+            nextRetryStr = 'Due now';
+          }
+        }
+
+        const createdDate = new Date(job.createdAt).toLocaleTimeString();
+
+        return `
+          <tr>
+            <td><span class="badge ${badgeClass}">${job.status}</span></td>
+            <td style="font-weight: 600;">${escapeHtml(job.eventId)}</td>
+            <td class="url-cell" title="${escapeHtml(job.destinationUrl)}">${escapeHtml(job.destinationUrl)}</td>
+            <td class="mono-cell">${job.attempts} / 4</td>
+            <td class="mono-cell" style="color: ${job.status === 'RETRYING' ? '#fbbf24' : 'inherit'};">${nextRetryStr}</td>
+            <td class="mono-cell">${createdDate}</td>
+            <td>
+              <button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;" onclick="viewLogs('${job.id}', '${escapeHtml(job.eventId)}')">
+                Audit Logs 📋
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function handleDispatch(e) {
+      e.preventDefault();
+      const btn = document.getElementById('dispatch-btn');
+      const box = document.getElementById('response-box');
+      btn.disabled = true;
+      btn.textContent = 'Queueing...';
+      box.className = 'response-banner';
+      box.style.display = 'none';
+
+      try {
+        const destUrl = document.getElementById('dest-url').value.trim();
+        const eventId = document.getElementById('event-id').value.trim();
+        let payloadObj;
+        try {
+          payloadObj = JSON.parse(document.getElementById('payload').value);
+        } catch (err) {
+          throw new Error('Invalid JSON format in Payload');
+        }
+
+        const res = await fetch('/api/webhooks/dispatch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            destinationUrl: destUrl,
+            eventId: eventId,
+            payload: payloadObj
+          })
+        });
+
+        const data = await res.json();
+
+        if (res.status === 202) {
+          box.className = 'response-banner success';
+          box.innerHTML = `
+            <strong>✅ Webhook Queued Successfully (HTTP 202 Accepted)</strong><br>
+            Job ID: <code>${data.jobId}</code><br>
+            Background worker is executing asynchronous dispatch.
+          `;
+          generateEventId();
+          setTimeout(refreshAll, 500);
+        } else {
+          box.className = 'response-banner error';
+          box.innerHTML = `
+            <strong>❌ Ingestion Rejected (HTTP ${res.status})</strong><br>
+            ${escapeHtml(data.message || JSON.stringify(data))}
+          `;
+        }
+      } catch (err) {
+        box.className = 'response-banner error';
+        box.innerHTML = `<strong>❌ Error:</strong> ${escapeHtml(err.message)}`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Webhook (Ingest Queue)';
+      }
+    }
+
+    async function viewLogs(jobId, eventId) {
+      const modal = document.getElementById('logs-modal');
+      const container = document.getElementById('logs-container');
+      document.getElementById('modal-job-sub').textContent = `Job ID: ${jobId} | Event ID: ${eventId}`;
+      container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Fetching audit logs...</div>';
+      modal.classList.add('active');
+
+      try {
+        const res = await fetch(`/api/webhooks/jobs/${jobId}/logs`);
+        if (!res.ok) throw new Error('Failed to load logs');
+        const logs = await res.json();
+
+        if (logs.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+              No delivery attempts recorded yet. Worker may be processing or waiting for retry backoff.
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = logs.map(l => {
+          let codeBadge = l.responseCode ? `<span class="badge ${l.responseCode >= 200 && l.responseCode < 300 ? 'badge-success' : 'badge-failed'}">HTTP ${l.responseCode}</span>` : '<span class="badge badge-failed">No Response / Timeout</span>';
+          let time = new Date(l.attemptedAt).toLocaleString();
+
+          return `
+            <div class="log-entry">
+              <div class="log-header">
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <strong>Attempt #${l.attemptNumber}</strong>
+                  ${codeBadge}
+                  <span class="badge ${l.status === 'SUCCESS' ? 'badge-success' : l.status === 'RETRYING' ? 'badge-retrying' : 'badge-failed'}">${l.status}</span>
+                </div>
+                <span class="mono-cell">${time}</span>
+              </div>
+              ${l.errorMessage ? `<div style="color: #f87171; font-size: 0.8rem; font-family: var(--font-mono);">⚠️ ${escapeHtml(l.errorMessage)}</div>` : ''}
+              ${l.responseBody ? `
+                <div style="font-size: 0.725rem; color: var(--text-muted); font-weight: 600;">Response Body:</div>
+                <div class="code-box">${escapeHtml(l.responseBody)}</div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = `<div style="color: #f87171; padding: 1rem;">Failed to fetch logs: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function closeLogsModal(e) {
+      if (e.target.id === 'logs-modal') {
+        document.getElementById('logs-modal').classList.remove('active');
+      }
+    }
+
+    function toggleAutoRefresh(enabled) {
+      if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+      if (enabled) {
+        autoRefreshInterval = setInterval(refreshAll, 2000);
+      }
+    }
+
+    function refreshAll() {
+      fetchStats();
+      fetchJobs();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Initialize
+    refreshAll();
+    toggleAutoRefresh(true);
+  </script>
+</body>
+</html>

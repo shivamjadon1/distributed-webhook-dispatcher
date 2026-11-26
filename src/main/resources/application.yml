@@ -70,5 +70,5 @@ webhook:
     connect-timeout-ms: 5000
     read-timeout-ms: 5000
   security:
-    allow-loopback-for-testing: false
-    allow-insecure-http: false
+    allow-loopback-for-testing: ${ALLOW_LOOPBACK:true}
+    allow-insecure-http: ${ALLOW_INSECURE_HTTP:true}
