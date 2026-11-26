@@ -1,0 +1,198 @@
+{
+  "info": {
+    "_postman_id": "d8e3b8a1-7c5e-49b2-9a0e-distributed-webhook-dispatcher",
+    "name": "Distributed Webhook Dispatcher API",
+    "description": "Comprehensive Postman collection for testing the Distributed Webhook Dispatcher Engine take-home assignment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "jobId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "health"]
+        },
+        "description": "Verifies that the service is UP and healthy."
+      }
+    },
+    {
+      "name": "2. Ingest Webhook Dispatch (Standard Success)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.jobId) {",
+              "    pm.collectionVariables.set('jobId', jsonData.jobId);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"destinationUrl\": \"https://httpbin.org/post\",\n  \"eventId\": \"evt_order_101\",\n  \"payload\": {\n    \"event\": \"order.completed\",\n    \"orderId\": \"ord_8829\",\n    \"amount\": 149.99,\n    \"customer\": \"alice@example.com\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/webhooks/dispatch",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "webhooks", "dispatch"]
+        },
+        "description": "Dispatches webhook to external HTTP destination. Responds immediately with HTTP 202 Accepted."
+      }
+    },
+    {
+      "name": "3. Query Job Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/webhooks/jobs/{{jobId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "webhooks", "jobs", "{{jobId}}"]
+        },
+        "description": "Fetches current job status (PENDING, PROCESSING, RETRYING, SUCCESS, FAILED)."
+      }
+    },
+    {
+      "name": "4. Query Delivery Logs for Job",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/webhooks/jobs/{{jobId}}/logs",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "webhooks", "jobs", "{{jobId}}", "logs"]
+        },
+        "description": "Returns full auditable log of delivery attempts with status, HTTP status codes, and response bodies."
+      }
+    },
+    {
+      "name": "5. Test Mock Receiver - Guaranteed 200 OK",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"destinationUrl\": \"{{baseUrl}}/api/mock/receiver\",\n  \"eventId\": \"evt_mock_success\",\n  \"payload\": {\n    \"test\": \"success\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/webhooks/dispatch",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "webhooks", "dispatch"]
+        },
+        "description": "Tests built-in mock receiver endpoint that returns HTTP 200 immediately."
+      }
+    },
+    {
+      "name": "6. Test Retry with Exponential Backoff (Mock 503)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"destinationUrl\": \"{{baseUrl}}/api/mock/fail\",\n  \"eventId\": \"evt_mock_fail_retry\",\n  \"payload\": {\n    \"test\": \"exponential_backoff_retry\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/webhooks/dispatch",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "webhooks", "dispatch"]
+        },
+        "description": "Triggers 3 retries (2s, 4s, 8s backoff) by targeting endpoint returning HTTP 503."
+      }
+    },
+    {
+      "name": "7. Test Rate Limiting Retry-After (Mock 429)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"destinationUrl\": \"{{baseUrl}}/api/mock/ratelimit\",\n  \"eventId\": \"evt_mock_ratelimit\",\n  \"payload\": {\n    \"test\": \"downstream_ratelimit\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/webhooks/dispatch",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "webhooks", "dispatch"]
+        },
+        "description": "Tests downstream HTTP 429 response handling and Retry-After delay parsing."
+      }
+    },
+    {
+      "name": "8. Test Non-Blocking Behavior (Mock 10s Delay)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"destinationUrl\": \"{{baseUrl}}/api/mock/delay?ms=10000\",\n  \"eventId\": \"evt_mock_delay\",\n  \"payload\": {\n    \"test\": \"non_blocking\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/webhooks/dispatch",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "webhooks", "dispatch"]
+        },
+        "description": "Proves non-blocking architecture: even if downstream takes 10s, dispatch API responds in <15ms with HTTP 202 Accepted."
+      }
+    },
+    {
+      "name": "9. Queue & Dispatcher Stats",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/webhooks/stats",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "webhooks", "stats"]
+        },
+        "description": "Returns counts of jobs broken down by status (PENDING, PROCESSING, RETRYING, SUCCESS, FAILED)."
+      }
+    }
+  ]
+}

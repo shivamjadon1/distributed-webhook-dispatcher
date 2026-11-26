@@ -193,6 +193,8 @@ CREATE INDEX idx_delivery_logs_attempted_at
 
 ## 7. API Reference
 
+> 📥 **Postman Collection**: A complete ready-to-import Postman collection is included in the repository at [`postman_collection.json`](./postman_collection.json). Simply import it into Postman and set the `baseUrl` collection variable to your live Railway domain or `http://localhost:8080`.
+
 ### 1. Ingest Webhook Dispatch
 - **Endpoint**: `POST /api/webhooks/dispatch`
 - **Status Code**: `202 Accepted`
